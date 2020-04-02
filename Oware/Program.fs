@@ -36,7 +36,7 @@ let getSeeds house board =  //Calls getSpecific  For later when need to check st
                            |_ -> seeds (currentHouse+1) houseLookingFor tail
     match (house>0),(house<13) with        //checking seed pos actually exists
     |true,true -> seeds 1 house (getBoard board)
-    |_ -> failwith "position not available (line 22: getSeeds)"
+    |_ -> failwith "position not available (line 39: getSeeds)"
 
 let print a = sprintf "%A" a
 
@@ -48,31 +48,37 @@ let applyPoint board num =
             |North -> (s,(n+num))
 
 let distributeSeeds house board =
-    let rec sow currentHouse house listi score (newBoard,seeds) =
+    let score = getScore board
+    let rec sow currentHouse house listi (newBoard,seeds) =
         match listi with 
         |[] -> match (seeds>0) with
-               |true -> sow 1 0 (List.rev (getBoard newBoard)) score (([],(getTurn newBoard),(getScore newBoard)), seeds)    //Reached the end of the list with more seeds to be distributed
+               |true -> sow 1 0 (List.rev (getBoard newBoard)) (([],(getTurn newBoard),(score)), seeds)    //Reached the end of the list with more seeds to be distributed
                |_ -> ((List.rev (getBoard newBoard)),(nextTurn newBoard),(getScore newBoard))                   //Reached the end of list (turn over)
         |h::t -> 
                  match (currentHouse < house) with 
-                 |true -> sow (currentHouse+1) house t score (((h::(getBoard newBoard)),(getTurn board),(getScore board)),seeds)    //Do nothing to the house
+                 |true -> sow (currentHouse+1) house t (((h::(getBoard newBoard)),(getTurn board),(getScore newBoard)),seeds)    //Do nothing to the house
                  |_ -> 
                         match (currentHouse = house) with
                         |true -> 
                                 match (h>0) with                                                                                                //Check that the house isn't empty (again)
-                                |true -> sow (currentHouse+1) house t score (((0::(getBoard newBoard)),(getTurn board),(getScore board)),h)     //Set head to 0 and seeds to head
+                                |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn board),(getScore newBoard)),h)     //Set head to 0 and seeds to head
                                 |_ -> failwith "Cannot sow from empty house"                                                                   
                         |_ -> 
                                 match (currentHouse > house) with 
                                 |true -> 
-                                        match (seeds>0) with 
-                                        |true -> sow (currentHouse+1) house t score ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore board)),(seeds-1))   //distribute seed to the head of the list
-                                        |_ -> 
-                                             sow (currentHouse+1) house t score ((((h)::(getBoard newBoard)),(getTurn board),(getScore board)),(seeds))          //no more seeds to distribute
+                                        match (seeds>=0) with
+                                        |true -> match seeds=0 with
+                                                 |true -> let endingHouse= (getBoard newBoard).Head
+                                                          match endingHouse with 
+                                                          | 3|2 -> let score = applyPoint newBoard endingHouse
+                                                                   sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(score)),(seeds))    
+                                                          | _ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds))
+                                                 | false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1))   //distribute seed to the head of the list //try adding point here
+                                        //|_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(score)),(seeds))          //no more seeds to distribute
                                             
                                 |_ -> failwith "Well Shit (distributeSeeds)"
     match house>0 with 
-    |true -> sow 1 house (getBoard board) (getScore board) (([],(getTurn board),(getScore board)) ,0)
+    |true -> sow 1 house (getBoard board) (([],(getTurn board),(getScore board)) ,0)
     |_ -> failwith "House does not exist"
 
 let checkValid house position = 
@@ -95,12 +101,35 @@ let start position =
 let score board =  
     getScore board
 
-let gameState board = 
-    match (getTurn board) with 
-    |South -> "South's turn"
-    |North -> "North's turn" //Come back to
+let gameState board =
+    match (getScore board) with 
+     | s,n -> match s<25 && n<25 with
+              |true -> match (getTurn board) with 
+                        |South -> "South's turn"
+                        |North -> "North's turn" //Come back to
+              |false -> match s=n with
+                        |true -> "Game ended in a draw"
+                        |false -> match s>=25 && n <25 with
+                                  | true -> "North won"
+                                  | false -> match n>=25 && s<25 with
+                                             | true -> "South won"
+                                             | false -> failwith "Game outcome unknown"
+    
 
 [<EntryPoint>]
 let main _ =
-    printfn "Hello from F#!"
+    
+    let playGame numbers =
+        let rec play xs game =
+            match xs with
+            | [] -> game
+            | x::xs -> play xs (useHouse x game)
+        play numbers (start South)
+
+    let expr = score (playGame [1])
+    System.Console.WriteLine(expr)
+    let ay = System.Console.ReadKey()
+    
+    (*let board = start North |> useHouse 12*)
+    
     0 // return an integer exit code
