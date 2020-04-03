@@ -47,38 +47,62 @@ let applyPoint board num =
             |South -> ((s+num),n)
             |North -> (s,(n+num))
 
+let rec harvest board nuBoard currenthouse endinghouse =
+    match (board) with
+    | [] -> ((getBoard nuBoard)),(nextTurn nuBoard),(getScore nuBoard) 
+    | h::t -> match getTurn nuBoard with
+              | North -> match endinghouse >= 7 && endinghouse <=12 with 
+                         |true ->  match (currenthouse<endinghouse) with
+                                      |true ->  harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                                      |false -> match (currenthouse <= endinghouse) with
+                                                | true -> match h with
+                                                           | 3|2 -> let score = applyPoint nuBoard h
+                                                                    harvest t ((0::(getBoard nuBoard)),getTurn nuBoard,score) (currenthouse+1) endinghouse
+                                                           | _ -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                                                | false -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                         |false -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+              | South -> match endinghouse >= 1 && endinghouse <=6 with 
+                         |true ->  match (currenthouse<endinghouse) with
+                                      |true ->  harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                                      |false -> match (currenthouse <= endinghouse) with
+                                                | true -> match h with
+                                                           | 3|2 -> let score = applyPoint nuBoard h
+                                                                    harvest t ((0::(getBoard nuBoard)),getTurn nuBoard,score) (currenthouse+1) endinghouse
+                                                           | _ -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                                                | false -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+                         |false -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse
+
 let distributeSeeds house board =
     let score = getScore board
-    let rec sow currentHouse house listi (newBoard,seeds) =
+    let rec sow currentHouse house listi (newBoard,seeds) endingHouse =
         match listi with 
         |[] -> match (seeds>0) with
-               |true -> sow 1 0 (List.rev (getBoard newBoard)) (([],(getTurn newBoard),(score)), seeds)    //Reached the end of the list with more seeds to be distributed
-               |_ -> ((List.rev (getBoard newBoard)),(nextTurn newBoard),(getScore newBoard))                   //Reached the end of list (turn over)
+               |true -> sow 1 0 (List.rev (getBoard newBoard)) (([],(getTurn newBoard),(score)), seeds) endingHouse    //Reached the end of the list with more seeds to be distributed
+               |_ -> //((List.rev (getBoard newBoard)),(nextTurn newBoard),(getScore newBoard))                 //Reached the end of list (turn over)
+                     let endingHouse = (13 - endingHouse)
+                     harvest ((getBoard newBoard)) ([],getTurn newBoard,getScore newBoard) 1 endingHouse
         |h::t -> 
                  match (currentHouse < house) with 
-                 |true -> sow (currentHouse+1) house t (((h::(getBoard newBoard)),(getTurn board),(getScore newBoard)),seeds)    //Do nothing to the house
+                 |true -> sow (currentHouse+1) house t (((h::(getBoard newBoard)),(getTurn board),(getScore newBoard)),seeds) endingHouse    //Do nothing to the house
                  |_ -> 
                         match (currentHouse = house) with
                         |true -> 
                                 match (h>0) with                                                                                                //Check that the house isn't empty (again)
-                                |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn board),(getScore newBoard)),h)     //Set head to 0 and seeds to head
+                                |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn board),(getScore newBoard)),h) endingHouse     //Set head to 0 and seeds to head
                                 |_ -> failwith "Cannot sow from empty house"                                                                   
                         |_ -> 
                                 match (currentHouse > house) with 
                                 |true -> 
-                                        match (seeds>=0) with
-                                        |true -> match seeds=0 with
-                                                 |true -> let endingHouse= (getBoard newBoard).Head
-                                                          match endingHouse with 
-                                                          | 3|2 -> let score = applyPoint newBoard endingHouse
-                                                                   sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(score)),(seeds))    
-                                                          | _ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds))
-                                                 | false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1))   //distribute seed to the head of the list //try adding point here
-                                        //|_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(score)),(seeds))          //no more seeds to distribute
+                                        match (seeds>0) with
+                                        |true -> match seeds=1 with
+                                                 |true -> let endingHouse= currentHouse
+                                                          sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse
+                                                 |false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse  //distribute seed to the head of the list //try adding point here
+                                        |_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds)) endingHouse          //no more seeds to distribute
                                             
                                 |_ -> failwith "Well Shit (distributeSeeds)"
     match house>0 with 
-    |true -> sow 1 house (getBoard board) (([],(getTurn board),(getScore board)) ,0)
+    |true -> sow 1 house (getBoard board) (([],(getTurn board),(getScore board)) ,0) 0
     |_ -> failwith "House does not exist"
 
 let checkValid house position = 
@@ -95,8 +119,7 @@ let useHouse n board =
     |_ -> board
                    
 let start position = 
-   ([4;4;4;4;4;4;4;4;4;4;4;4],position,(0,0))
-    
+   ([4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4],position,(0,0))
 
 let score board =  
     getScore board
@@ -126,8 +149,9 @@ let main _ =
             | x::xs -> play xs (useHouse x game)
         play numbers (start South)
 
-    let expr = score (playGame [1])
-    System.Console.WriteLine(expr)
+    let expr = getBoard (playGame [1])
+    let hyo = score (playGame [1])
+    printfn "%A %A" expr hyo
     let ay = System.Console.ReadKey()
     
     (*let board = start North |> useHouse 12*)
