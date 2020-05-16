@@ -38,12 +38,11 @@ let getSeeds n state =
 
 let print a = sprintf "%A" a
 
-let applyPoint board num = // adds points to the score after a capture 
-    match (getScore board) with 
-    |s,n -> 
-            match (getTurn board) with
-            |South -> ((s+num),n)
-            |North -> (s,(n+num))
+let applyPoint state num = // adds points to the score after a capture 
+    let s,n= getScore state
+    match (getTurn state) with
+    |South -> (s+num,n) 
+    |North -> (s,n+num)
 
 let rec checkzero turn list = //this function returns true if capturing would remove all the pieces on the opponenets board
     match list with
