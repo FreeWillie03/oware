@@ -27,16 +27,14 @@ let nextTurn board = // changes the turn after a play
                     |South -> North
                     |North -> South
 
-let getSeeds house board =  //Calls getSpecific  For later when need to check stuff(listi,SouthPoints,NorthPoints) as board 
-    let rec seeds currentHouse houseLookingFor board =
-       match board with
-            |[] -> failwith "The house chosen is not on the board (line 33: getSeeds)"
-            |head::tail -> match currentHouse = houseLookingFor with 
-                           |true -> head
-                           |_ -> seeds (currentHouse+1) houseLookingFor tail
-    match (house>0),(house<13) with        //checking seed pos actually exists
-    |true,true -> seeds 1 house (getBoard board)
-    |_ -> failwith "position not available (line 39: getSeeds)"
+let getSeeds n state =
+    let board= getBoard state 
+    match board with
+    |[]-> failwith "Board cannot be empty"
+    | _-> List.fold( fun (i,value) item -> i+1,match i=n with |true -> Some item |_ ->value) (1,None) board |>
+          fun (_,x)-> match x with //iterates through whole board looking to see if the house exists and returns it seeds if it does
+                      | None-> failwith "House number doesn't exist"
+                      | Some seeds-> seeds
 
 let print a = sprintf "%A" a
 
