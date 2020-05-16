@@ -9,20 +9,20 @@ type StartingPosition =
     | South
     | North
 
-let getBoard board = // gets a list representing each house and the numbers of seeds inside 
-    match board with 
+let getBoard state = // gets a list representing each house and the numbers of seeds inside 
+    match state with 
     |b,pos,score -> b
 
-let getTurn board = // gets the position of who is currently playing 
-    match board with 
+let getTurn state = // gets the position of who is currently playing 
+    match state with 
     |b,pos,score -> pos
 
-let getScore board = // gets the value of the current score
-    match board with 
+let getScore state = // gets the value of the current score
+    match state with 
     |b,pos,score -> score 
 
-let nextTurn board = // changes the turn after a play
-    match board with 
+let nextTurn state = // changes the turn after a play
+    match state with 
     |b,pos,score -> match pos with 
                     |South -> North
                     |North -> South
@@ -116,8 +116,8 @@ let rec harvest board nuBoard currenthouse endinghouse switch = // this function
                                                          | false -> failwith "Something probably went wrong with (currenthouse > endinghouse)"
                          |false -> harvest t ((h::(getBoard nuBoard)),getTurn nuBoard,getScore nuBoard) (currenthouse+1) endinghouse switch
 
-let distributeSeeds house board =
-    let score = getScore board
+let distributeSeeds house state =
+    let score = getScore state
     let origin = false // origin is used to determine whether or not we are on the original house and will therefore be used to skip it during sowing
     let originhouse = house
     let rec sow currentHouse house listi (newBoard,seeds) endingHouse origin =
@@ -127,78 +127,78 @@ let distributeSeeds house board =
                         sow 1 0 (List.rev (getBoard newBoard)) (([],(getTurn newBoard),(score)), seeds) endingHouse (origin)  //Reached the end of the list with more seeds to be distributed i.e only sowed into houses that were after the initial
                |_ -> let endingHouse = (13 - endingHouse) // the harvest function will iterate through the sown board backwards so the ending house position needs re - adjustment 
                      match checklegal (getTurn newBoard) (List.rev (getBoard newBoard)) with // Must play to give opponent pieces, if they have none 
-                     | true -> ((getBoard board),getTurn board,getScore newBoard) //return original board before play, player has to use another hole
+                     | true -> ((getBoard state),getTurn state,getScore newBoard) //return original board before play, player has to use another hole
                                 // some output for the user should go here i.e " You must play to give your opponent pieces"
                      | false -> let harvestedBoard = harvest ((getBoard newBoard)) ([],getTurn newBoard,getScore newBoard) 1 endingHouse false // harvest seeds regardless of whether or not they will remove pieces from opponents board 
                                 match checkzero (getTurn harvestedBoard) (getBoard harvestedBoard) with // check if opponents board is empty 
                                 | true -> (List.rev (getBoard newBoard),nextTurn newBoard,getScore newBoard) // return board before capture
                                 | false -> harvestedBoard // return harvested board         
         |h::t -> match (currentHouse < house) with 
-                 |true -> sow (currentHouse+1) house t (((h::(getBoard newBoard)),(getTurn board),(getScore newBoard)),seeds) endingHouse (origin)   //  Do nothing to the house
+                 |true -> sow (currentHouse+1) house t (((h::(getBoard newBoard)),(getTurn state),(getScore newBoard)),seeds) endingHouse (origin)   //  Do nothing to the house
                  |_ -> match origin with
                        | true -> match originhouse = currentHouse with
                                  |true ->let origin = false // once set back to false will not be changed again
-                                         sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds)) endingHouse (origin) // skip original house when sowing 
+                                         sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds)) endingHouse (origin) // skip original house when sowing 
                                  |false -> match (currentHouse = house) with
                                            |true ->match (h>0) with        //Check that the house isn't empty (again)
-                                                            |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn board),(getScore newBoard)),h) endingHouse (origin)   //Set head to 0 and seeds to head
+                                                            |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn state),(getScore newBoard)),h) endingHouse (origin)   //Set head to 0 and seeds to head
                                                             |_ -> failwith "Cannot sow from empty house"                                                                       
                                            |_ ->match (currentHouse > house) with 
                                                 |true ->match (seeds>0) with
                                                         |true -> match seeds=1 with 
                                                                     |true -> let endingHouse= currentHouse // this finds the value of the house that the last seed was dropped into 
-                                                                             sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse (origin)
-                                                                    |false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse (origin)  //distribute seed to the head of the list
-                                                        |_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds)) endingHouse (origin)    //no more seeds to distribute
+                                                                             sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds-1)) endingHouse (origin)
+                                                                    |false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds-1)) endingHouse (origin)  //distribute seed to the head of the list
+                                                        |_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds)) endingHouse (origin)    //no more seeds to distribute
                                                 |_ -> failwith "Well Shit (distributeSeeds)"
                        | false -> match (currentHouse = house) with // this branch is used when origin is false, mostly identical to code above
                                         |true ->match (h>0) with                                                                                                //Check that the house isn't empty (again)
-                                                            |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn board),(getScore newBoard)),h) endingHouse (origin)   //Set head to 0 and seeds to head
+                                                            |true -> sow (currentHouse+1) house t (((0::(getBoard newBoard)),(getTurn state),(getScore newBoard)),h) endingHouse (origin)   //Set head to 0 and seeds to head
                                                             |_ -> failwith "Cannot sow from empty house"                                                                       
                                         |_ -> match (currentHouse > house) with 
                                                 |true ->match (seeds>0) with
                                                         |true -> match seeds=1 with
                                                                     |true -> let endingHouse= currentHouse
-                                                                             sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse (origin)
-                                                                    |false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds-1)) endingHouse (origin)  //distribute seed to the head of the list //try adding point here
-                                                        |_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn board),(getScore newBoard)),(seeds)) endingHouse (origin)        //no more seeds to distribute
+                                                                             sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds-1)) endingHouse (origin)
+                                                                    |false -> sow (currentHouse+1) house t ((((h+1)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds-1)) endingHouse (origin)  //distribute seed to the head of the list //try adding point here
+                                                        |_ -> sow (currentHouse+1) house t ((((h)::(getBoard newBoard)),(getTurn state),(getScore newBoard)),(seeds)) endingHouse (origin)        //no more seeds to distribute
                                                 |_ -> failwith "Well Shit (distributeSeeds)"
     match house>0 with 
-    |true -> sow 1 house (getBoard board) (([],(getTurn board),(getScore board)) ,0) 0 false 
+    |true -> sow 1 house (getBoard state) (([],(getTurn state),(getScore state)) ,0) 0 false 
     |_ -> failwith "House does not exist"
 
 let checkValid house position = // prevents the player from manipulating the opponents houses 
     match position with
     |South -> house<=6
-    |_ -> house>6
+    |North -> house>6
 
-let useHouse n board = 
-    match ((getSeeds n board)>0) with
+let useHouse n state = 
+    match ((getSeeds n state)>0) with
     |true -> 
-                match (checkValid n (getTurn board)) with // check valid move - house number and position must match e.g. North cannot move from house 1
-                |true -> distributeSeeds n board
-                |_ -> board
-    |_ -> board
+                match (checkValid n (getTurn state)) with // check valid move - house number and position must match e.g. North cannot move from house 1
+                |true -> distributeSeeds n state
+                |_ -> state
+    |_ -> state
                    
 let start position = 
-   ([4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4],position,(0,0))
+   ([4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4; 4],position,(0,0)) //creates an initial state of the board (board,position,(south score,north score))
 
-let score board =  // gets the current score 
-    getScore board
+let score state =  // gets the current score 
+    getScore state
 
-let gameState board =
-    match (getScore board) with 
-     | s,n -> match s<24 && n<24 with
-              |true -> match (getTurn board) with 
+let gameState state =
+    let s,n=getScore state
+    match s<24 && n<24 with
+    |true ->    match (getTurn state) with 
                         |South -> "South's turn"
                         |North -> "North's turn" 
-              |false -> match s=24 && n = 24 with
-                        |true -> "Game ended in a draw"
-                        |false -> match s>=25 && n <25 with
-                                  | true -> "South won"
-                                  | false -> match n>=25 && s<25 with
-                                             | true -> "North won"
-                                             | false -> failwith "Game outcome unknown"
+    |false ->   match s=24 && n = 24 with
+                |true -> "Game ended in a draw"
+                |false -> match s>=25 && n <25 with
+                          | true -> "South won"
+                          | false -> match n>=25 && s<25 with
+                                     | true -> "North won"
+                                     | false -> failwith "Game outcome unknown"
     
 [<EntryPoint>]
 let main _ = 0 // return an integer exit code
