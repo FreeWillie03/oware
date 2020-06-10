@@ -204,4 +204,4 @@ let gameState board =
                                              | false -> failwith "Game outcome unknown"
     
 [<EntryPoint>]
-let main _ = 0 // return an integer exit code
+let main _ = 0 // return an integer exit codes
